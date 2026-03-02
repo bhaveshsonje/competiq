@@ -1,6 +1,8 @@
-# ⚡ CompetIQ — AI-Powered Competitive Intelligence Engine
+# CompetIQ — AI Multi-Agent Competitive Intelligence Engine
 
-A multi-agent system that autonomously researches companies and generates comprehensive competitive intelligence reports in real-time.
+An AI-powered system that autonomously researches companies using parallel specialized agents and generates structured, citation-backed competitive intelligence reports in real time.
+
+Built to demonstrate multi-agent orchestration, reflexive evaluation loops, and live streaming UX.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?style=flat-square&logo=fastapi)
@@ -9,168 +11,206 @@ A multi-agent system that autonomously researches companies and generates compre
 
 ---
 
-## 🎯 What It Does
+## 🚀 Why This Project Is Interesting
 
-Enter a company and its competitors — 5 specialized AI agents spin up in **parallel**, each researching a different dimension of the competitive landscape. A Synthesizer agent compiles all findings into a structured report, and a Critic agent evaluates quality and triggers rewrites if the score is below 7/10.
+Instead of prompting a single LLM, CompetIQ:
 
-The entire process streams live to a browser UI, with real-time agent status updates, charts, and one-click PDF export.
+- Spins up **5 specialized agents in parallel**
+- Synthesizes structured intelligence from grounded web sources
+- Uses a **self-critique (Reflexion) loop** to evaluate and rewrite weak outputs
+- Streams live agent execution to the browser
+- Persists full report history with quality scoring
+
+This mirrors how real analyst teams operate — fully automated.
 
 ---
 
-## 🏗️ Architecture
+## 🧠 System Architecture
 
 ```
 User Query
     │
     ▼
-┌─────────────────────────────────────────┐
-│         LangGraph Orchestrator          │
-│                                         │
-│  ┌──────────┐  ┌──────────┐            │
-│  │   News   │  │ Product  │            │
-│  │  Agent   │  │  Agent   │  (parallel) │
-│  └────┬─────┘  └────┬─────┘            │
-│  ┌────┴─────┐  ┌────┴─────┐            │
-│  │ Pricing  │  │Sentiment │            │
-│  │  Agent   │  │  Agent   │  (parallel) │
-│  └────┬─────┘  └────┬─────┘            │
-│       │    ┌──────┐  │                 │
-│       └────┤Market├──┘                 │
-│            │Agent │                   │
-│            └──┬───┘                   │
-│               │                       │
-│         ┌─────▼──────┐                │
-│         │Synthesizer │                │
-│         └─────┬──────┘                │
-│               │                       │
-│         ┌─────▼──────┐                │
-│         │   Critic   │◄──── Reflexion  │
-│         │   Agent    │      Loop      │
-│         └─────┬──────┘                │
-└───────────────┼─────────────────────┘
-                ▼
-         Final Report + PDF
+LangGraph Orchestrator
+    │
+    ├── News Agent
+    ├── Product Agent
+    ├── Pricing Agent
+    ├── Sentiment Agent
+    └── Market Agent     (executed in parallel)
+            │
+            ▼
+        Synthesizer
+            │
+            ▼
+        Critic Agent
+        (Scores 1–10)
+            │
+     If score < 7 → Rewrite
+            │
+            ▼
+        Final Report + PDF
 ```
 
----
+### Key Architectural Decisions
 
-## ✨ Features
-
-- **5 Parallel Research Agents** — News, Product, Pricing, Sentiment, Market — run simultaneously via `ThreadPoolExecutor`
-- **Self-Critique Loop (Reflexion Pattern)** — Critic agent scores the report 1–10 and triggers rewrites for scores below 7
-- **Real-Time Streaming UI** — Server-Sent Events (SSE) stream live agent updates to the browser
-- **Confidence Scoring** — Each agent scores its findings based on source quality (powered by Tavily)
-- **Source Citations** — Every claim is traceable to a real URL
-- **SQLite Persistence** — All analyses saved with full history and trend tracking
-- **PDF Export** — One-click professional report download (ReportLab)
-- **Interactive Charts** — Sentiment comparison bar chart + report quality radar chart (Chart.js)
+- **Parallelism:** `ThreadPoolExecutor` reduces latency across research agents
+- **Graph Orchestration:** LangGraph controls execution flow and Reflexion loop
+- **Grounded Intelligence:** Tavily search ensures citation-backed analysis
+- **Live Feedback:** Server-Sent Events (SSE) stream agent status updates
+- **Evaluation Layer:** Critic agent enforces minimum report quality
 
 ---
 
-## 🛠️ Tech Stack
+## 🔥 Core Features
+
+### 🧩 Parallel Multi-Agent Research
+Five domain-specific agents analyze:
+- News & press coverage
+- Product capabilities
+- Pricing models
+- Customer sentiment
+- Market positioning
+
+### 🔁 Reflexion (Self-Critique Pattern)
+A Critic agent:
+- Scores reports from 1–10
+- Triggers automatic rewrites if score < 7
+- Improves structural clarity and analytical depth
+
+### 📡 Real-Time Streaming UI
+- Live agent status panel
+- Streaming updates via SSE
+- No polling required
+
+### 📊 Visual Intelligence
+- Sentiment comparison bar chart
+- Quality radar chart
+- Source citations for every major claim
+
+### 🗂 Persistence Layer
+- SQLite + SQLAlchemy
+- Full historical tracking
+- Quality trend analysis over time
+
+### 📄 Professional PDF Export
+- One-click download
+- Executive-ready formatting
+- Generated using ReportLab
+
+---
+
+## 🛠 Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|-------|------------|
 | LLM | Groq (Llama 3.3 70B) |
-| Agent Orchestration | LangGraph |
-| Web Search | Tavily API |
-| Backend | FastAPI + SSE |
-| Database | SQLite (SQLAlchemy) |
+| Orchestration | LangGraph |
+| Search & Grounding | Tavily API |
+| Backend | FastAPI |
+| Streaming | Server-Sent Events (SSE) |
+| Database | SQLite + SQLAlchemy |
 | PDF Generation | ReportLab |
 | Frontend | Vanilla JS + Chart.js |
 
 ---
 
-## 🚀 Getting Started
+## 🧪 What This Demonstrates
 
-### 1. Clone the repo
+This project showcases:
+
+- Multi-agent system design
+- Graph-based orchestration
+- Parallel execution strategies
+- Reflexion-style evaluation loops
+- LLM grounding with external tools
+- Real-time backend-to-frontend streaming
+- End-to-end full-stack AI architecture
+
+---
+
+## 📂 High-Level Project Structure
+
+```
+competiq/
+├── main.py                # FastAPI + SSE
+├── graph/orchestrator.py  # LangGraph execution + Reflexion
+├── agents/                # Specialized research agents
+├── tools/search.py        # Tavily grounding layer
+├── database/              # Persistence + PDF export
+└── frontend/              # Live streaming UI
+```
+
+---
+
+## 🎯 Example Use Case
+
+**Input:**
+- Company: Salesforce  
+- Competitors: HubSpot, Zoho  
+
+**Output:**
+- Multi-dimensional competitive report
+- Citation-backed claims
+- Sentiment comparison chart
+- Quality-scored analysis
+- Downloadable executive PDF
+
+---
+
+## ⚙️ Setup (Optional)
+
+<details>
+<summary>Click to expand setup instructions</summary>
+
+### Clone Repository
 ```bash
 git clone https://github.com/YOUR_USERNAME/competiq.git
 cd competiq
 ```
 
-### 2. Create virtual environment
+### Create Virtual Environment
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+### Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Set up environment variables
+### Configure Environment Variables
 ```bash
 cp .env.example .env
 ```
-Edit `.env` and add your API keys:
+
+Add:
 ```
-GROQ_API_KEY=your_groq_key_here       # Free at console.groq.com
-TAVILY_API_KEY=your_tavily_key_here   # Free at tavily.com
+GROQ_API_KEY=your_groq_key
+TAVILY_API_KEY=your_tavily_key
 ```
 
-### 5. Run the server
+### Run Server
 ```bash
 python main.py
 ```
 
-Open **http://localhost:8080** in your browser.
-
----
-
-## 📸 Usage
-
-1. Enter the company you want to analyze (e.g. `Salesforce`)
-2. Add one or more competitors (e.g. `HubSpot`, `Zoho`)
-3. Click **Run Analysis**
-4. Watch 5 agents work in real-time in the Agent Status panel
-5. Read the full report, explore charts, check sources
-6. Export to PDF with one click
-
----
-
-## 📁 Project Structure
-
+Open:
 ```
-competiq/
-├── main.py                  # FastAPI app + SSE streaming
-├── requirements.txt
-├── .env.example
-├── graph/
-│   └── orchestrator.py      # LangGraph parallel execution + Reflexion loop
-├── agents/
-│   ├── news_agent.py        # Recent news & press coverage
-│   ├── product_agent.py     # Features & capabilities analysis
-│   ├── pricing_agent.py     # Pricing models & tiers
-│   ├── sentiment_agent.py   # Customer reviews & sentiment scoring
-│   ├── market_agent.py      # Market share & positioning
-│   ├── synthesizer.py       # Report synthesis
-│   └── critic_agent.py      # Quality evaluation + Reflexion
-├── tools/
-│   └── search.py            # Tavily search with confidence scoring
-├── database/
-│   ├── models.py            # SQLAlchemy models + persistence
-│   └── pdf_export.py        # ReportLab PDF generation
-└── frontend/
-    └── index.html           # Streaming UI with Chart.js
+http://localhost:8080
 ```
 
----
-
-## 🔑 API Keys (Free Tiers)
-
-| Service | Free Tier | Link |
-|---------|-----------|------|
-| Groq | Unlimited (rate limited) | [console.groq.com](https://console.groq.com) |
-| Tavily | 1,000 searches/month | [tavily.com](https://tavily.com) |
+</details>
 
 ---
 
-## 📄 License
+## 👤 Built By
 
-MIT License — feel free to use, modify, and distribute.
+Bhavesh Sonje  
+MS Information Management — UIUC  
+Focused on AI systems, multi-agent architectures, and intelligent automation.
 
 ---
 
-Built by [Bhavesh Sonje](https://www.linkedin.com/in/bhavesh-sonje)
+MIT License
