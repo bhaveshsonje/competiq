@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Competitive Intelligence Engine</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f0f1a; --surface: #1a1a2e; --surface2: #16213e;
+    --accent: #7c6af7; --accent2: #4cc9f0; --text: #e8e8f0;
+    --muted: #8888aa; --border: #2a2a4a; --success: #4ade80;
+    --warning: #fbbf24; --error: #f87171;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* Header */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  .logo { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .tagline { color: var(--muted); font-size: 0.85rem; }
+
+  /* Layout */
+  .container { display: grid; grid-template-columns: 380px 1fr; gap: 0; height: calc(100vh - 65px); }
+
+  /* Sidebar */
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+  label { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  input { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; color: var(--text); font-size: 0.95rem; transition: border-color 0.2s; }
+  input:focus { outline: none; border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+
+  .competitors-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .competitor-input { display: flex; gap: 0.5rem; align-items: center; }
+  .competitor-input input { flex: 1; }
+  .btn-remove { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); width: 32px; height: 36px; cursor: pointer; font-size: 1rem; transition: all 0.2s; }
+  .btn-remove:hover { border-color: var(--error); color: var(--error); }
+  .btn-add { background: none; border: 1px dashed var(--border); border-radius: 8px; padding: 0.5rem; color: var(--muted); cursor: pointer; font-size: 0.85rem; transition: all 0.2s; width: 100%; }
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-analyze { background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 10px; padding: 0.9rem; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; width: 100%; }
+  .btn-analyze:hover { opacity: 0.9; }
+  .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Agent Status Panel */
+  .agent-panel { background: var(--bg); border-radius: 10px; padding: 1rem; }
+  .agent-panel h3 { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+  .agent-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+  .agent-item:last-child { border-bottom: none; }
+  .agent-icon { font-size: 1.1rem; width: 24px; }
+  .agent-name { font-size: 0.9rem; flex: 1; }
+  .agent-status { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 20px; }
+  .status-idle { background: var(--border); color: var(--muted); }
+  .status-running { background: rgba(124,106,247,0.2); color: var(--accent); animation: pulse 1.5s infinite; }
+  .status-done { background: rgba(74,222,128,0.2); color: var(--success); }
+  .status-error { background: rgba(248,113,113,0.2); color: var(--error); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  /* History */
+  .history-panel { background: var(--bg); border-radius: 10px; padding: 1rem; }
+  .history-panel h3 { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+  .history-item { padding: 0.6rem 0.75rem; border-radius: 8px; cursor: pointer; transition: background 0.2s; border: 1px solid transparent; }
+  .history-item:hover { background: var(--surface); border-color: var(--border); }
+  .history-item .h-company { font-size: 0.9rem; font-weight: 600; }
+  .history-item .h-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  /* Main content */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .tab { padding: 1rem 1.5rem; cursor: pointer; font-size: 0.9rem; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { flex: 1; overflow-y: auto; padding: 2rem; display: none; }
+  .tab-content.active { display: block; }
+
+  /* Report output */
+  .report-area { background: var(--surface); border-radius: 12px; padding: 2rem; min-height: 400px; line-height: 1.8; }
+  .report-area h1, .report-area h2, .report-area h3 { color: var(--accent2); margin: 1.5rem 0 0.75rem; }
+  .report-area h1 { font-size: 1.4rem; }
+  .report-area h2 { font-size: 1.15rem; }
+  .report-area strong { color: var(--text); }
+  .report-area ul, .report-area ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+  .report-area li { margin-bottom: 0.4rem; }
+  .report-area p { margin-bottom: 0.75rem; color: #ccc; }
+  .placeholder { text-align: center; color: var(--muted); padding: 4rem 2rem; }
+  .placeholder .big-icon { font-size: 4rem; margin-bottom: 1rem; }
+
+  /* Confidence bar */
+  .confidence-bar { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--surface2); border-radius: 10px; margin-bottom: 1rem; }
+  .conf-label { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+  .conf-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 1s; }
+  .conf-score { font-size: 0.85rem; font-weight: 700; color: var(--accent2); white-space: nowrap; }
+
+  /* Report actions */
+  .report-actions { display: flex; gap: 0.75rem; margin-bottom: 1rem; }
+  .btn-action { padding: 0.6rem 1.2rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+  .btn-action:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-pdf { background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: white; font-weight: 600; }
+  .btn-pdf:hover { opacity: 0.9; color: white; }
+
+  /* Charts tab */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .chart-card { background: var(--surface); border-radius: 12px; padding: 1.5rem; }
+  .chart-card h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Sources tab */
+  .source-item { display: flex; gap: 1rem; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 0.5rem; transition: border-color 0.2s; }
+  .source-item:hover { border-color: var(--accent); }
+  .source-num { font-size: 0.75rem; font-weight: 700; color: var(--accent); min-width: 24px; }
+  .source-title { font-size: 0.9rem; }
+  .source-url { font-size: 0.75rem; color: var(--accent2); word-break: break-all; }
+  .source-url a { color: inherit; text-decoration: none; }
+  .source-url a:hover { text-decoration: underline; }
+
+  /* Progress log */
+  .progress-log { background: var(--bg); border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.85rem; max-height: 200px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid var(--border); }
+  .log-entry { padding: 0.2rem 0; color: var(--muted); }
+  .log-entry.highlight { color: var(--accent2); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { grid-template-columns: 1fr; }
+    .sidebar { height: auto; }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">⚡ CompetIQ</div>
+  <div class="tagline">AI-powered competitive intelligence in real-time</div>
+</div>
+
+<div class="container">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="form-group">
+      <label>Company to Analyze</label>
+      <input type="text" id="company" placeholder="e.g. Salesforce" />
+    </div>
+
+    <div class="form-group">
+      <label>Competitors</label>
+      <div class="competitors-list" id="competitorsList">
+        <div class="competitor-input">
+          <input type="text" placeholder="e.g. HubSpot" class="competitor-field"/>
+          <button class="btn-remove" onclick="removeCompetitor(this)">×</button>
+        </div>
+      </div>
+      <button class="btn-add" onclick="addCompetitor()">+ Add Competitor</button>
+    </div>
+
+    <button class="btn-analyze" id="analyzeBtn" onclick="startAnalysis()">
+      🚀 Run Analysis
+    </button>
+
+    <!-- Agent Status -->
+    <div class="agent-panel">
+      <h3>Agent Status</h3>
+      <div class="agent-item"><span class="agent-icon">🗞️</span><span class="agent-name">News Agent</span><span class="agent-status status-idle" id="status-news">Idle</span></div>
+      <div class="agent-item"><span class="agent-icon">🛠️</span><span class="agent-name">Product Agent</span><span class="agent-status status-idle" id="status-product">Idle</span></div>
+      <div class="agent-item"><span class="agent-icon">💰</span><span class="agent-name">Pricing Agent</span><span class="agent-status status-idle" id="status-pricing">Idle</span></div>
+      <div class="agent-item"><span class="agent-icon">💬</span><span class="agent-name">Sentiment Agent</span><span class="agent-status status-idle" id="status-sentiment">Idle</span></div>
+      <div class="agent-item"><span class="agent-icon">📊</span><span class="agent-name">Market Agent</span><span class="agent-status status-idle" id="status-market">Idle</span></div>
+      <div class="agent-item"><span class="agent-icon">📝</span><span class="agent-name">Synthesizer</span><span class="agent-status status-idle" id="status-synthesizer">Idle</span></div>
+      <div class="agent-item"><span class="agent-icon">🔍</span><span class="agent-name">Critic Agent</span><span class="agent-status status-idle" id="status-critic">Idle</span></div>
+    </div>
+
+    <!-- History -->
+    <div class="history-panel">
+      <h3>Past Analyses</h3>
+      <div id="historyList"><p style="color:var(--muted);font-size:0.8rem;">No analyses yet.</p></div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('report', this)">📄 Report</div>
+      <div class="tab" onclick="switchTab('charts', this)">📊 Charts</div>
+      <div class="tab" onclick="switchTab('sources', this)">🔗 Sources</div>
+    </div>
+
+    <!-- Report Tab -->
+    <div class="tab-content active" id="tab-report">
+      <div id="progressLog" class="progress-log" style="display:none;"></div>
+
+      <div id="confidenceBar" style="display:none;" class="confidence-bar">
+        <span class="conf-label">Data Confidence</span>
+        <div class="conf-track"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+        <span class="conf-score" id="confScore">0/10</span>
+      </div>
+
+      <div id="reportActions" class="report-actions" style="display:none;">
+        <button class="btn-action btn-pdf" id="pdfBtn" onclick="downloadPDF()">⬇ Export PDF</button>
+        <button class="btn-action" onclick="copyReport()">📋 Copy Text</button>
+      </div>
+
+      <div class="report-area" id="reportArea">
+        <div class="placeholder">
+          <div class="big-icon">🧠</div>
+          <h2 style="color:var(--text);margin-bottom:0.5rem;">Ready to analyze</h2>
+          <p>Enter a company and its competitors, then hit Run Analysis.</p>
+          <p style="margin-top:0.5rem;">5 AI agents will run in parallel and synthesize a full report.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Tab -->
+    <div class="tab-content" id="tab-charts">
+      <div class="charts-grid" id="chartsGrid">
+        <div class="chart-card">
+          <h3>😊 Sentiment Scores</h3>
+          <canvas id="sentimentChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>🎯 Agent Confidence</h3>
+          <canvas id="confidenceChart"></canvas>
+        </div>
+      </div>
+      <div class="placeholder" id="chartsPlaceholder">
+        <div class="big-icon">📊</div>
+        <p>Charts will appear after your first analysis.</p>
+      </div>
+    </div>
+
+    <!-- Sources Tab -->
+    <div class="tab-content" id="tab-sources">
+      <div id="sourcesList">
+        <div class="placeholder">
+          <div class="big-icon">🔗</div>
+          <p>Sources will appear after your first analysis.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentAnalysisId = null;
+let sentimentChart = null;
+let confidenceChart = null;
+
+// Tab switching
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// Competitors
+function addCompetitor() {
+  const list = document.getElementById('competitorsList');
+  const div = document.createElement('div');
+  div.className = 'competitor-input';
+  div.innerHTML = `<input type="text" placeholder="e.g. Competitor name" class="competitor-field"/>
+                   <button class="btn-remove" onclick="removeCompetitor(this)">×</button>`;
+  list.appendChild(div);
+}
+function removeCompetitor(btn) {
+  const list = document.getElementById('competitorsList');
+  if (list.children.length > 1) btn.parentElement.remove();
+}
+
+// Agent status helpers
+function setAgentStatus(name, status) {
+  const el = document.getElementById('status-' + name);
+  if (!el) return;
+  el.className = 'agent-status status-' + status;
+  const labels = { idle: 'Idle', running: 'Running...', done: 'Done ✓', error: 'Error' };
+  el.textContent = labels[status] || status;
+}
+function resetAgentStatuses() {
+  ['news','product','pricing','sentiment','market','synthesizer','critic'].forEach(a => setAgentStatus(a, 'idle'));
+}
+
+// Progress log
+function logMessage(msg, highlight = false) {
+  const log = document.getElementById('progressLog');
+  log.style.display = 'block';
+  const entry = document.createElement('div');
+  entry.className = 'log-entry' + (highlight ? ' highlight' : '');
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+// Main analysis
+async function startAnalysis() {
+  const company = document.getElementById('company').value.trim();
+  const competitors = [...document.querySelectorAll('.competitor-field')]
+    .map(i => i.value.trim()).filter(v => v);
+
+  if (!company) { alert('Please enter a company name.'); return; }
+  if (competitors.length === 0) { alert('Please add at least one competitor.'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analyzing...';
+  resetAgentStatuses();
+
+  document.getElementById('progressLog').innerHTML = '';
+  document.getElementById('progressLog').style.display = 'block';
+  document.getElementById('confidenceBar').style.display = 'none';
+  document.getElementById('reportActions').style.display = 'none';
+  document.getElementById('reportArea').innerHTML = '<div class="placeholder"><div class="big-icon">⚡</div><p>Analysis in progress...</p></div>';
+  document.getElementById('chartsPlaceholder').style.display = 'block';
+
+  // Set all agents to running
+  ['news','product','pricing','sentiment','market'].forEach(a => setAgentStatus(a, 'running'));
+  logMessage(`Starting analysis: ${company} vs ${competitors.join(', ')}`, true);
+
+  const eventSource = new EventSource(`/api/analyze/stream?t=${Date.now()}`);
+
+  // Use POST via fetch with SSE workaround
+  eventSource.close();
+
+  try {
+    const response = await fetch('/api/analyze/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company, competitors })
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const msg = JSON.parse(line.slice(6));
+            handleSSEMessage(msg);
+          } catch(e) {}
+        }
+      }
+    }
+  } catch(e) {
+    logMessage('Error: ' + e.message);
+    ['news','product','pricing','sentiment','market'].forEach(a => setAgentStatus(a, 'error'));
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🚀 Run Analysis';
+}
+
+function handleSSEMessage(msg) {
+  const type = msg.type;
+
+  if (type === 'agent_start') {
+    logMessage(msg.message, true);
+  } else if (type === 'agent_done') {
+    logMessage('✓ ' + msg.message);
+    const name = msg.message.toLowerCase().split(' ')[0];
+    if (['news','product','pricing','sentiment','market'].includes(name)) {
+      setAgentStatus(name, 'done');
+    }
+  } else if (type === 'synthesizing') {
+    ['news','product','pricing','sentiment','market'].forEach(a => setAgentStatus(a, 'done'));
+    setAgentStatus('synthesizer', 'running');
+    logMessage('📝 ' + msg.message, true);
+  } else if (type === 'critiquing') {
+    setAgentStatus('synthesizer', 'done');
+    setAgentStatus('critic', 'running');
+    logMessage('🔍 ' + msg.message, true);
+  } else if (type === 'revising') {
+    setAgentStatus('critic', 'running');
+    logMessage('🔄 ' + msg.message, true);
+  } else if (type === 'complete') {
+    setAgentStatus('critic', 'done');
+    logMessage('✅ ' + msg.message, true);
+  } else if (type === 'result') {
+    renderResult(msg.data);
+  } else if (type === 'error') {
+    logMessage('❌ Error: ' + msg.message);
+  }
+}
+
+function renderResult(data) {
+  currentAnalysisId = data.analysis_id;
+
+  // Render report
+  const reportHtml = markdownToHtml(data.final_report || '');
+  document.getElementById('reportArea').innerHTML = reportHtml;
+
+  // Confidence bar
+  const conf = data.overall_confidence || 0;
+  document.getElementById('confidenceBar').style.display = 'flex';
+  document.getElementById('confFill').style.width = (conf * 10) + '%';
+  document.getElementById('confScore').textContent = conf + '/10';
+
+  // Actions
+  document.getElementById('reportActions').style.display = 'flex';
+
+  // Charts
+  renderCharts(data);
+
+  // Sources
+  renderSources(data.sources || []);
+
+  // Refresh history
+  loadHistory();
+}
+
+function markdownToHtml(md) {
+  return md
+    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^- (.*$)/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^([^<].+)$/gm, '<p>$1</p>');
+}
+
+function renderCharts(data) {
+  document.getElementById('chartsPlaceholder').style.display = 'none';
+
+  // Sentiment chart
+  const sentimentScores = data.sentiment_scores || {};
+  const companies = data.companies || [];
+  const scores = companies.map(c => sentimentScores[c] || 5);
+  const colors = ['#7c6af7','#4cc9f0','#4ade80','#fbbf24','#f87171'];
+
+  if (sentimentChart) sentimentChart.destroy();
+  const sCtx = document.getElementById('sentimentChart').getContext('2d');
+  sentimentChart = new Chart(sCtx, {
+    type: 'bar',
+    data: {
+      labels: companies,
+      datasets: [{ label: 'Sentiment Score', data: scores, backgroundColor: colors.slice(0, companies.length), borderRadius: 6 }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { min: 0, max: 10, ticks: { color: '#8888aa' }, grid: { color: '#2a2a4a' } },
+        x: { ticks: { color: '#8888aa' }, grid: { display: false } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Confidence radar
+  const critique = data.critique || {};
+  const critiqueScores = critique.scores || {};
+  if (confidenceChart) confidenceChart.destroy();
+  const cCtx = document.getElementById('confidenceChart').getContext('2d');
+  confidenceChart = new Chart(cCtx, {
+    type: 'radar',
+    data: {
+      labels: ['Completeness', 'Specificity', 'Actionability', 'Balance'],
+      datasets: [{
+        label: 'Report Quality',
+        data: [
+          critiqueScores.completeness || 7,
+          critiqueScores.specificity || 7,
+          critiqueScores.actionability || 7,
+          critiqueScores.balance || 7
+        ],
+        backgroundColor: 'rgba(124,106,247,0.2)',
+        borderColor: '#7c6af7',
+        pointBackgroundColor: '#4cc9f0'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        r: { min: 0, max: 10, ticks: { color: '#8888aa', backdropColor: 'transparent' }, grid: { color: '#2a2a4a' }, pointLabels: { color: '#8888aa' } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function renderSources(sources) {
+  const list = document.getElementById('sourcesList');
+  if (!sources.length) { list.innerHTML = '<div class="placeholder"><p>No sources found.</p></div>'; return; }
+  list.innerHTML = sources.map((s, i) => `
+    <div class="source-item">
+      <div class="source-num">${i + 1}</div>
+      <div>
+        <div class="source-title">${s.title || 'Source'}</div>
+        <div class="source-url"><a href="${s.url}" target="_blank">${s.url}</a></div>
+      </div>
+    </div>`).join('');
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/analyses?limit=5');
+    const analyses = await res.json();
+    const list = document.getElementById('historyList');
+    if (!analyses.length) { list.innerHTML = '<p style="color:var(--muted);font-size:0.8rem;">No analyses yet.</p>'; return; }
+    list.innerHTML = analyses.map(a => `
+      <div class="history-item" onclick="loadAnalysis(${a.id})">
+        <div class="h-company">${a.company}</div>
+        <div class="h-meta">vs ${(a.competitors || []).join(', ')} • ${a.created_at ? a.created_at.slice(0,10) : ''}</div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function loadAnalysis(id) {
+  try {
+    const res = await fetch(`/api/analyses/${id}`);
+    const data = await res.json();
+    currentAnalysisId = id;
+    document.getElementById('reportArea').innerHTML = markdownToHtml(data.final_report || '');
+    const conf = data.overall_confidence || 0;
+    document.getElementById('confidenceBar').style.display = 'flex';
+    document.getElementById('confFill').style.width = (conf * 10) + '%';
+    document.getElementById('confScore').textContent = conf + '/10';
+    document.getElementById('reportActions').style.display = 'flex';
+    renderSources(data.sources || []);
+  } catch(e) {}
+}
+
+async function downloadPDF() {
+  if (!currentAnalysisId) return;
+  window.open(`/api/analyses/${currentAnalysisId}/pdf`, '_blank');
+}
+
+function copyReport() {
+  const text = document.getElementById('reportArea').innerText;
+  navigator.clipboard.writeText(text).then(() => alert('Report copied to clipboard!'));
+}
+
+// Load history on startup
+loadHistory();
+</script>
+</body>
+</html>

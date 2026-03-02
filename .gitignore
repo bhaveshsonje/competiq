@@ -1,0 +1,40 @@
+# Environment variables — NEVER commit API keys
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Database — local only
+*.db
+*.sqlite3
+
+# PDF exports
+*.pdf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+
+# LangSmith / LangChain cache
+.langchain.db
+langchain_cache/

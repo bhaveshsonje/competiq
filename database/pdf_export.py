@@ -1,0 +1,142 @@
+import os
+import json
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+
+def generate_pdf(analysis: dict, output_path: str) -> str:
+    """Generate a professional PDF competitive intelligence report."""
+
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=letter,
+        rightMargin=0.75 * inch,
+        leftMargin=0.75 * inch,
+        topMargin=1 * inch,
+        bottomMargin=1 * inch
+    )
+
+    styles = getSampleStyleSheet()
+
+    # Custom styles
+    title_style = ParagraphStyle(
+        "CustomTitle",
+        parent=styles["Title"],
+        fontSize=24,
+        textColor=colors.HexColor("#1a1a2e"),
+        spaceAfter=6,
+        alignment=TA_CENTER
+    )
+    subtitle_style = ParagraphStyle(
+        "Subtitle",
+        parent=styles["Normal"],
+        fontSize=12,
+        textColor=colors.HexColor("#4a4a8a"),
+        spaceAfter=20,
+        alignment=TA_CENTER
+    )
+    heading_style = ParagraphStyle(
+        "CustomHeading",
+        parent=styles["Heading1"],
+        fontSize=14,
+        textColor=colors.HexColor("#1a1a2e"),
+        spaceBefore=16,
+        spaceAfter=8,
+        borderPad=4
+    )
+    body_style = ParagraphStyle(
+        "CustomBody",
+        parent=styles["Normal"],
+        fontSize=10,
+        leading=16,
+        spaceAfter=8,
+        textColor=colors.HexColor("#333333")
+    )
+    meta_style = ParagraphStyle(
+        "Meta",
+        parent=styles["Normal"],
+        fontSize=9,
+        textColor=colors.HexColor("#888888"),
+        alignment=TA_CENTER
+    )
+
+    story = []
+
+    # Header
+    story.append(Spacer(1, 0.3 * inch))
+    story.append(Paragraph("Competitive Intelligence Report", title_style))
+    story.append(Paragraph(f"Analysis: {analysis.get('company', 'Unknown')}", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#4a4a8a")))
+    story.append(Spacer(1, 0.2 * inch))
+
+    # Metadata table
+    competitors = analysis.get("competitors", [])
+    date_str = analysis.get("created_at", datetime.now().isoformat())[:10]
+    confidence = analysis.get("overall_confidence", 0)
+    critique_score = analysis.get("critique_score", 0)
+
+    meta_data = [
+        ["Company", analysis.get("company", "N/A")],
+        ["Competitors Analyzed", ", ".join(competitors) if competitors else "N/A"],
+        ["Report Date", date_str],
+        ["Data Confidence", f"{confidence}/10"],
+        ["Quality Score", f"{critique_score}/10"],
+    ]
+    meta_table = Table(meta_data, colWidths=[2 * inch, 4.5 * inch])
+    meta_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f0f8")),
+        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#1a1a2e")),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+        ("PADDING", (0, 0), (-1, -1), 8),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 0.3 * inch))
+
+    # Report content
+    report_text = analysis.get("final_report", "No report generated.")
+    lines = report_text.split("\n")
+    for line in lines:
+        line = line.strip()
+        if not line:
+            story.append(Spacer(1, 0.1 * inch))
+        elif line.startswith("## ") or line.startswith("# "):
+            heading = line.lstrip("#").strip()
+            story.append(Paragraph(heading, heading_style))
+        elif line.startswith("**") and line.endswith("**"):
+            story.append(Paragraph(f"<b>{line.strip('*')}</b>", body_style))
+        elif line.startswith("- ") or line.startswith("* "):
+            story.append(Paragraph(f"• {line[2:]}", body_style))
+        else:
+            clean = line.replace("**", "<b>", 1).replace("**", "</b>", 1)
+            story.append(Paragraph(clean, body_style))
+
+    # Sources
+    sources = analysis.get("sources", [])
+    if sources:
+        story.append(Spacer(1, 0.3 * inch))
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cccccc")))
+        story.append(Paragraph("Sources & References", heading_style))
+        for i, source in enumerate(sources[:15], 1):
+            story.append(Paragraph(
+                f"{i}. <b>{source.get('title', 'Unknown')}</b><br/>"
+                f"<font color='#4a4a8a'>{source.get('url', '')}</font>",
+                body_style
+            ))
+
+    # Footer
+    story.append(Spacer(1, 0.3 * inch))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cccccc")))
+    story.append(Paragraph(
+        f"Generated by Competitive Intelligence Engine • {datetime.now().strftime('%B %d, %Y')}",
+        meta_style
+    ))
+
+    doc.build(story)
+    return output_path
